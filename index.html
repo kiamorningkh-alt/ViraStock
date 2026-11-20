@@ -46,6 +46,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 5px;
   <h2>📷 ស្កេន Barcode តាមកាមេរ៉ា</h2>
   <div class="actions"><button class="primary" id="startBtn">បើកកាមេរ៉ាស្កេន</button><button class="soft" id="stopBtn" disabled>បិទកាមេរ៉ា</button></div>
   <div id="cameraBox"><video id="video" playsinline muted></video><div class="scanline"></div></div>
+  <label>លេខ Barcode ដែលស្កេនបាន</label>
+  <input id="lastScannedCode" type="text" inputmode="numeric" placeholder="លេខ Barcode នឹងបង្ហាញនៅទីនេះ" readonly>
   <p class="note" id="cameraMsg">ចុចបើកកាមេរ៉ា រួចអនុញ្ញាត Camera។ ដាក់ Barcode នៅកណ្ដាលរូបភាព។</p>
   <label>បញ្ចូលលេខ Barcode ដោយដៃ (បើចាំបាច់)</label>
   <div class="field"><input id="manualCode" type="text" inputmode="numeric" placeholder="លេខ Barcode"><button class="dark" id="addCodeBtn">បញ្ចូល</button></div>
@@ -69,20 +71,22 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 5px;
 <script type="module">
 const $=id=>document.getElementById(id), fmt=n=>Number(n||0).toLocaleString('en-US')+'៛';
 let products=JSON.parse(localStorage.getItem('vira_products')||'{}'),cart=JSON.parse(localStorage.getItem('vira_cart')||'[]');
-let scanCount=Number(localStorage.getItem('vira_scan_count')||0), controls=null, reader=null,lastCode='',lastAt=0;
+let scanCount=Number(localStorage.getItem('vira_scan_count')||0), controls=null, reader=null,lastCode='',lastAt=0,audioCtx=null;
+function unlockAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){if(!audioCtx)audioCtx=new AC();if(audioCtx.state==='suspended')audioCtx.resume()}}catch(e){}}
+function beep(){try{unlockAudio();if(!audioCtx)return;const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='sine';osc.frequency.setValueAtTime(880,audioCtx.currentTime);gain.gain.setValueAtTime(0.0001,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(0.18,audioCtx.currentTime+0.012);gain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.16);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+0.17)}catch(e){}}
 function persist(){localStorage.setItem('vira_products',JSON.stringify(products));localStorage.setItem('vira_cart',JSON.stringify(cart));localStorage.setItem('vira_scan_count',String(scanCount))}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(){ $('scanCount').textContent=scanCount;$('itemCount').textContent=cart.reduce((s,x)=>s+x.qty,0);let sum=cart.reduce((s,x)=>s+x.qty*x.price,0);$('grandTotal').textContent=fmt(sum);$('totalBottom').textContent=fmt(sum);
 $('cartBody').innerHTML=cart.length?cart.map((x,i)=>`<tr><td>${i+1}</td><td><b>${esc(x.name)}</b><div class="small">${esc(x.barcode)}</div></td><td class="num">${x.qty}</td><td class="num">${fmt(x.qty*x.price)}</td><td><button class="danger" style="padding:5px 9px;min-height:32px" data-del="${i}">×</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">មិនទាន់មានទំនិញទេ</td></tr>';
 document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{cart.splice(Number(b.dataset.del),1);persist();render()})}
-function addBarcode(code){code=String(code||'').trim();if(!code)return;let p=products[code];if(!p){$('pBarcode').value=code;$('cameraMsg').textContent='រកមិនឃើញ Barcode នេះទេ។ សូមចុះឈ្មោះឈ្មោះ និងតម្លៃទំនិញខាងក្រោម។';$('pName').focus();return}
-let row=cart.find(x=>x.barcode===code);if(row)row.qty++;else cart.push({barcode:code,name:p.name,price:Number(p.price),qty:1});scanCount++;persist();render();$('manualCode').value='';$('cameraMsg').textContent='បានស្កេន '+p.name+' • '+fmt(p.price);if(navigator.vibrate)navigator.vibrate(70)}
+function addBarcode(code){code=String(code||'').trim();if(!code)return;$('lastScannedCode').value=code;beep();if(navigator.vibrate)navigator.vibrate(70);let p=products[code];if(!p){$('pBarcode').value=code;$('cameraMsg').textContent='រកមិនឃើញ Barcode នេះទេ។ លេខកូដត្រូវបានបង្ហាញខាងលើ។ សូមចុះឈ្មោះឈ្មោះ និងតម្លៃទំនិញខាងក្រោម។';$('pName').focus();return}
+let row=cart.find(x=>x.barcode===code);if(row)row.qty++;else cart.push({barcode:code,name:p.name,price:Number(p.price),qty:1});scanCount++;persist();render();$('manualCode').value='';$('cameraMsg').textContent='បានស្កេន '+p.name+' • '+fmt(p.price)}
 $('addCodeBtn').onclick=()=>addBarcode($('manualCode').value);$('manualCode').addEventListener('keydown',e=>{if(e.key==='Enter')addBarcode(e.target.value)});
 $('saveProduct').onclick=()=>{let c=$('pBarcode').value.trim(),n=$('pName').value.trim(),v=$('pPrice').value;if(!c||!n||v===''||Number(v)<0){alert('សូមបំពេញ Barcode ឈ្មោះ និងតម្លៃឱ្យបានត្រឹមត្រូវ');return}products[c]={name:n,price:Number(v)};persist();$('cameraMsg').textContent='រក្សាទុកទំនិញ '+n+' បានជោគជ័យ';$('pBarcode').value='';$('pName').value='';$('pPrice').value=''};
 $('clearProduct').onclick=()=>['pBarcode','pName','pPrice'].forEach(x=>$(x).value='');
 $('clearCart').onclick=()=>{if(confirm('តើចង់លុបបញ្ជីស្កេនទាំងអស់មែនទេ?')){cart=[];scanCount=0;persist();render()}};
 $('exportBtn').onclick=()=>{let rows=[['No','Barcode','Product','Quantity','Unit Price','Total'],...cart.map((x,i)=>[i+1,x.barcode,x.name,x.qty,x.price,x.qty*x.price])];let csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='VIRA_SCAN_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href)};
-async function startCamera(){try{if(!navigator.mediaDevices?.getUserMedia){$('cameraMsg').textContent='សូមបើក App តាម HTTPS ក្នុង Safari ដើម្បីប្រើ Camera';return}
+async function startCamera(){unlockAudio();try{if(!navigator.mediaDevices?.getUserMedia){$('cameraMsg').textContent='សូមបើក App តាម HTTPS ក្នុង Safari ដើម្បីប្រើ Camera';return}
 $('cameraMsg').textContent='កំពុងត្រៀម Scanner…';const mod=await import('https://esm.sh/@zxing/browser@0.1.5');reader=new mod.BrowserMultiFormatReader();$('cameraBox').style.display='block';$('startBtn').disabled=true;$('stopBtn').disabled=false;
 controls=await reader.decodeFromVideoDevice(undefined,$('video'),(result)=>{if(result){let code=result.getText(),now=Date.now();if(code!==lastCode||now-lastAt>1600){lastCode=code;lastAt=now;addBarcode(code)}}});
 $('cameraMsg').textContent='កាមេរ៉ាកំពុងស្កេន។ ដាក់ Barcode នៅកណ្ដាលរូបភាព។';
