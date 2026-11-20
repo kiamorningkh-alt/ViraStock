@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="km">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10243a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VIRA SCAN">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>VIRA BARCODE SCAN</title>
+<style>
+:root{--navy:#10243a;--blue:#1769aa;--green:#16834a;--bg:#f2f5f9;--ink:#172435;--muted:#6b7788;--line:#e0e7ef}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans Khmer","Khmer OS System",sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{background:linear-gradient(140deg,#10243a,#1c5a83);color:#fff;padding:calc(18px + env(safe-area-inset-top)) 18px 22px;border-radius:0 0 23px 23px}
+header h1{font-size:22px;margin:0;font-weight:800}header p{margin:5px 0 0;color:#d7e9f5;font-size:13px}
+main{max-width:650px;margin:auto;padding:13px 13px 30px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat,.panel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 12px #142b420b}
+.stat{text-align:center;padding:12px 5px}.stat strong{display:block;color:var(--blue);font-size:21px}.stat span{font-size:11px;color:var(--muted)}
+.panel{padding:14px;margin-top:12px}.panel h2{font-size:16px;margin:0 0 12px}
+button,input{font:inherit}button{border:0;border-radius:12px;padding:12px 13px;font-weight:700;cursor:pointer;min-height:44px}
+button:disabled{opacity:.5}.primary{background:var(--blue);color:white}.dark{background:var(--navy);color:white}.soft{background:#eaf2f9;color:#174c75}.danger{background:#fff0ef;color:#b83228}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#cameraBox{display:none;background:#101820;border-radius:14px;overflow:hidden;margin-top:11px;position:relative}
+video{display:block;width:100%;max-height:340px;object-fit:cover}.scanline{position:absolute;left:10%;right:10%;top:50%;height:2px;background:#39ed98;box-shadow:0 0 12px #39ed98}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}input{width:100%;min-width:0;border:1px solid #ccd6e2;border-radius:11px;padding:11px;background:#fff;color:var(--ink)}
+.field{display:flex;gap:8px}.field input{flex:1}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.note,.small{font-size:12px;color:var(--muted);line-height:1.6}.small{font-size:11px}
+.productline{display:flex;justify-content:space-between;gap:8px;align-items:center}.productline h2{margin:0}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 5px;border-bottom:1px solid var(--line);text-align:left}th{font-size:11px;color:var(--muted)}.num{text-align:right}.empty{text-align:center;color:var(--muted);padding:22px 5px}
+.total{display:flex;justify-content:space-between;padding-top:12px;font-size:18px;font-weight:800}
+.install-tip{background:#eaf4ff;border:1px solid #cfe4f7;border-radius:13px;padding:11px 12px;font-size:12px;line-height:1.6;margin-top:12px}
+@media(max-width:360px){.stat strong{font-size:18px}.actions{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>VIRA BARCODE SCAN</h1><p>ស្កេនទំនិញ • រាប់ចំនួន • គណនាតម្លៃ</p></header>
+<main>
+ <section class="stats">
+  <div class="stat"><strong id="scanCount">0</strong><span>ចំនួនស្កេន</span></div>
+  <div class="stat"><strong id="itemCount">0</strong><span>ចំនួនទំនិញ</span></div>
+  <div class="stat"><strong id="grandTotal">0៛</strong><span>តម្លៃសរុប</span></div>
+ </section>
+ <section class="panel">
+  <h2>📷 ស្កេន Barcode តាមកាមេរ៉ា</h2>
+  <div class="actions"><button class="primary" id="startBtn">បើកកាមេរ៉ាស្កេន</button><button class="soft" id="stopBtn" disabled>បិទកាមេរ៉ា</button></div>
+  <div id="cameraBox"><video id="video" playsinline muted></video><div class="scanline"></div></div>
+  <p class="note" id="cameraMsg">ចុចបើកកាមេរ៉ា រួចអនុញ្ញាត Camera។ ដាក់ Barcode នៅកណ្ដាលរូបភាព។</p>
+  <label>បញ្ចូលលេខ Barcode ដោយដៃ (បើចាំបាច់)</label>
+  <div class="field"><input id="manualCode" type="text" inputmode="numeric" placeholder="លេខ Barcode"><button class="dark" id="addCodeBtn">បញ្ចូល</button></div>
+ </section>
+ <section class="panel">
+  <h2>➕ ចុះឈ្មោះទំនិញ</h2>
+  <label>លេខ Barcode</label><input id="pBarcode" type="text" placeholder="ឧ. 8850123456789">
+  <div class="grid2"><div><label>ឈ្មោះទំនិញ</label><input id="pName" type="text" placeholder="ឧ. COCA"></div><div><label>តម្លៃ (រៀល)</label><input id="pPrice" type="number" min="0" step="1" placeholder="2000"></div></div>
+  <div class="row"><button class="primary" id="saveProduct">រក្សាទុកទំនិញ</button><button class="soft" id="clearProduct">សម្អាត</button></div>
+  <p class="small">ត្រូវចុះឈ្មោះ Barcode, ឈ្មោះ និងតម្លៃមុន។ ពេលស្កេនម្ដងទៀត ប្រព័ន្ធនឹងបន្ថែមចំនួនដោយស្វ័យប្រវត្តិ។</p>
+ </section>
+ <section class="panel">
+  <div class="productline"><h2>🧾 បញ្ជីស្កេន</h2><button class="soft" id="exportBtn">Export CSV</button></div>
+  <div style="overflow-x:auto"><table><thead><tr><th>ល.រ</th><th>ទំនិញ / Barcode</th><th class="num">ចំនួន</th><th class="num">សរុប</th><th></th></tr></thead><tbody id="cartBody"><tr><td colspan="5" class="empty">មិនទាន់មានទំនិញទេ</td></tr></tbody></table></div>
+  <div class="total"><span>តម្លៃសរុប</span><span id="totalBottom">0៛</span></div>
+  <div class="row"><button class="danger" id="clearCart">លុបបញ្ជីស្កេន</button></div>
+ </section>
+ <div class="install-tip"><b>របៀបដំឡើង App លើ iPhone:</b> បើក Link នេះក្នុង Safari → ចុចប៊ូតុង Share (រូបការ៉េមានព្រួញឡើង) → ជ្រើស <b>Add to Home Screen</b> → ចុច Add។</div>
+ <p class="note" style="text-align:center">ទិន្នន័យរក្សាទុកក្នុង Safari លើ iPhone នេះ។ សូម Export CSV ជាប្រចាំ។</p>
+</main>
+<script type="module">
+const $=id=>document.getElementById(id), fmt=n=>Number(n||0).toLocaleString('en-US')+'៛';
+let products=JSON.parse(localStorage.getItem('vira_products')||'{}'),cart=JSON.parse(localStorage.getItem('vira_cart')||'[]');
+let scanCount=Number(localStorage.getItem('vira_scan_count')||0), controls=null, reader=null,lastCode='',lastAt=0;
+function persist(){localStorage.setItem('vira_products',JSON.stringify(products));localStorage.setItem('vira_cart',JSON.stringify(cart));localStorage.setItem('vira_scan_count',String(scanCount))}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){ $('scanCount').textContent=scanCount;$('itemCount').textContent=cart.reduce((s,x)=>s+x.qty,0);let sum=cart.reduce((s,x)=>s+x.qty*x.price,0);$('grandTotal').textContent=fmt(sum);$('totalBottom').textContent=fmt(sum);
+$('cartBody').innerHTML=cart.length?cart.map((x,i)=>`<tr><td>${i+1}</td><td><b>${esc(x.name)}</b><div class="small">${esc(x.barcode)}</div></td><td class="num">${x.qty}</td><td class="num">${fmt(x.qty*x.price)}</td><td><button class="danger" style="padding:5px 9px;min-height:32px" data-del="${i}">×</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">មិនទាន់មានទំនិញទេ</td></tr>';
+document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{cart.splice(Number(b.dataset.del),1);persist();render()})}
+function addBarcode(code){code=String(code||'').trim();if(!code)return;let p=products[code];if(!p){$('pBarcode').value=code;$('cameraMsg').textContent='រកមិនឃើញ Barcode នេះទេ។ សូមចុះឈ្មោះឈ្មោះ និងតម្លៃទំនិញខាងក្រោម។';$('pName').focus();return}
+let row=cart.find(x=>x.barcode===code);if(row)row.qty++;else cart.push({barcode:code,name:p.name,price:Number(p.price),qty:1});scanCount++;persist();render();$('manualCode').value='';$('cameraMsg').textContent='បានស្កេន '+p.name+' • '+fmt(p.price);if(navigator.vibrate)navigator.vibrate(70)}
+$('addCodeBtn').onclick=()=>addBarcode($('manualCode').value);$('manualCode').addEventListener('keydown',e=>{if(e.key==='Enter')addBarcode(e.target.value)});
+$('saveProduct').onclick=()=>{let c=$('pBarcode').value.trim(),n=$('pName').value.trim(),v=$('pPrice').value;if(!c||!n||v===''||Number(v)<0){alert('សូមបំពេញ Barcode ឈ្មោះ និងតម្លៃឱ្យបានត្រឹមត្រូវ');return}products[c]={name:n,price:Number(v)};persist();$('cameraMsg').textContent='រក្សាទុកទំនិញ '+n+' បានជោគជ័យ';$('pBarcode').value='';$('pName').value='';$('pPrice').value=''};
+$('clearProduct').onclick=()=>['pBarcode','pName','pPrice'].forEach(x=>$(x).value='');
+$('clearCart').onclick=()=>{if(confirm('តើចង់លុបបញ្ជីស្កេនទាំងអស់មែនទេ?')){cart=[];scanCount=0;persist();render()}};
+$('exportBtn').onclick=()=>{let rows=[['No','Barcode','Product','Quantity','Unit Price','Total'],...cart.map((x,i)=>[i+1,x.barcode,x.name,x.qty,x.price,x.qty*x.price])];let csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='VIRA_SCAN_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href)};
+async function startCamera(){try{if(!navigator.mediaDevices?.getUserMedia){$('cameraMsg').textContent='សូមបើក App តាម HTTPS ក្នុង Safari ដើម្បីប្រើ Camera';return}
+$('cameraMsg').textContent='កំពុងត្រៀម Scanner…';const mod=await import('https://esm.sh/@zxing/browser@0.1.5');reader=new mod.BrowserMultiFormatReader();$('cameraBox').style.display='block';$('startBtn').disabled=true;$('stopBtn').disabled=false;
+controls=await reader.decodeFromVideoDevice(undefined,$('video'),(result)=>{if(result){let code=result.getText(),now=Date.now();if(code!==lastCode||now-lastAt>1600){lastCode=code;lastAt=now;addBarcode(code)}}});
+$('cameraMsg').textContent='កាមេរ៉ាកំពុងស្កេន។ ដាក់ Barcode នៅកណ្ដាលរូបភាព។';
+}catch(e){$('cameraMsg').textContent='បើក Camera មិនបាន៖ '+e.message+'. សូមអនុញ្ញាត Camera និងប្រើ HTTPS។';stopCamera()}}
+function stopCamera(){if(controls){try{controls.stop()}catch(e){}controls=null}if($('video').srcObject){$('video').srcObject.getTracks().forEach(t=>t.stop());$('video').srcObject=null}$('cameraBox').style.display='none';$('startBtn').disabled=false;$('stopBtn').disabled=true}
+$('startBtn').onclick=startCamera;$('stopBtn').onclick=stopCamera;
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();
+</script>
+</body></html>
